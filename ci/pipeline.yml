@@ -24,10 +24,36 @@ resources:
     skip_cert_check: false
 
 jobs:
+- name: unit-test
+  serial: true
+  plan:
+  - get: cache-repo
+    trigger: true
+  - task: run-unit-tests
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: openjdk
+          tag: '8-jdk'
+      inputs:
+        - name: cache-repo
+      run:
+        path: sh
+        args:
+        - -exc
+        - |
+          cd cache-repo
+          ./gradlew clean test
+      caches:
+        - path: cache-repo/.gradle
+
 - name: release-build
   serial: true
   plan:
   - get: cache-repo
+    passed: [unit-test]
     trigger: true
   - task: build-jar
     config:
@@ -48,11 +74,10 @@ jobs:
         - |
           git clone cache-repo cache-repo-with-build
           cd cache-repo-with-build
-          export GRADLE_USER_HOME="$(pwd)/.gradle"
           ./gradlew clean bootJar
           date +'%s' > ci/release-info
       caches:
-        - path: cache-repo-with-build/.gradle/
+        - path: cache-repo-with-build/.gradle
   - put: cache-release
     params:
       name: cache-repo-with-build/ci/release-info
