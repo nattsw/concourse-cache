@@ -1,0 +1,7 @@
+applications:
+- name: cache-concourse
+  buildpack: java_buildpack_offline
+  path: application-0.0.1-boot.jar
+  disk_quota: 512M
+  instances: 1
+  memory: 1G
